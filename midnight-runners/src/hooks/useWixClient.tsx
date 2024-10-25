@@ -1,5 +1,4 @@
 "use client";
-
 import { WixClientContext } from "../context/wixContext";
 import { useContext, useEffect, useState } from "react";
 import Cookies from "js-cookie";

@@ -1,29 +1,47 @@
 import { create } from 'zustand';
-import { currentCart } from '@wix/ecom';
+import { getCurrentCart, addToCurrentCart, removeCouponFromCurrentCart } from '@wix/ecom';
+// OR you might need to use a different import if they are nested:
+// import * as currentCart from '@wix/ecom';
+// const { getCurrentCart, addToCurrentCart, removeCouponFromCurrentCart } = currentCart;
+
 import { WixClient } from '../context/wixContext';
 
+const fetchWixClient = async () => {
+  try {
+    const response = await fetch('/api/wixClientServer');
+    if (!response.ok) {
+      const errorMessage = await response.text(); // Get the error message
+      console.error('Failed to fetch Wix client:', errorMessage);
+      throw new Error('Failed to fetch Wix client');
+    }
+    const data = await response.json();
+    return data.client;
+  } catch (error) {
+    console.error('Fetch Wix client error:', error);
+    throw error;
+  }
+};
+
 type CartState = {
-  cart: currentCart.Cart | null;
+  cart: any | null;
   counter: number;
   isLoading: boolean;
-  getCart: (wixClient: WixClient) => void;
-  addItem: (
-    wixClient: WixClient,
-    productId: string,
-    variantId: string,
-    quantity: number
-  ) => void;
-  removeItem: (wixClient: WixClient, itemId: string) => void;
+  getCart: () => void;
+  addItem: (productId: string, variantId: string, quantity: number) => void;
+  removeItem: (itemId: string) => void;
 };
 
 export const useCartStore = create<CartState>((set) => ({
   cart: null,
   counter: 0,
   isLoading: false,
-  getCart: async (wixClient) => {
+  getCart: async () => {
     set({ isLoading: true });
     try {
-      const cart = await currentCart.getCurrentCart();
+      const wixClient = await fetchWixClient();
+      // Confirm that these functions are available on wixClient
+      console.log('Available functions on wixClient.currentCart:', Object.keys(wixClient.currentCart));
+      const cart = await wixClient.currentCart.getCurrentCart(); // Adjusted if nested
       set({
         cart: cart || null,
         counter: cart?.lineItems?.length || 0,
@@ -34,10 +52,11 @@ export const useCartStore = create<CartState>((set) => ({
       set({ isLoading: false });
     }
   },
-  addItem: async (wixClient, productId, variantId, quantity) => {
+  addItem: async (productId, variantId, quantity) => {
     set({ isLoading: true });
     try {
-      const response = await currentCart.addToCurrentCart({
+      const wixClient = await fetchWixClient();
+      const response = await wixClient.currentCart.addToCurrentCart({ // Adjusted if nested
         lineItems: [
           {
             catalogReference: {
@@ -65,10 +84,11 @@ export const useCartStore = create<CartState>((set) => ({
       set({ isLoading: false });
     }
   },
-  removeItem: async (wixClient, itemId) => {
+  removeItem: async (itemId) => {
     set({ isLoading: true });
     try {
-      const response = await currentCart.removeCouponFromCurrentCart();
+      const wixClient = await fetchWixClient();
+      const response = await wixClient.currentCart.removeCouponFromCurrentCart(); // Adjusted if nested
       set({
         cart: response.cart,
         counter: response.cart?.lineItems?.length || 0,
